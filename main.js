@@ -30,11 +30,42 @@ let elementalApp = (function() {
       this.color = "#c2b280";
       this.size = 1;
       this.type = "sand";
+      this.possibleDirections = {
+        up: [0, -1],
+        down: [0, 1],
+        left: [-1, 0],
+        right: [1, 0],
+        leftdown: [-1, 1],
+        leftup: [-1, 1],
+        rightdown: [1, 1],
+        rightup: [1, -1]
+      }
     }
 
     assignCellColor() {
       let color = "#c2b280";
       this.color = color;
+    }
+
+    moveDirection(direction) {
+      let dir = this.possibleDirections[direction];
+      this.x += dir[0];
+      this.y += dir[1];
+      delete grid.dirtyParticles[`${this.x + dir[0] * -1}-${this.y + dir[1] * -1}`];
+      delete grid.particles[`${this.x + dir[0] * -1}-${this.y + dir[1] * -1}`];
+      grid.particles[`${this.x}-${this.y}`] = this;
+      grid.dirtyParticles[`${this.x}-${this.y}`] = this;
+    }
+
+    swapDown() {
+      this.y++;
+      delete grid.dirtyParticles[`${this.x}-${this.y - 1}`];
+      delete grid.particles[`${this.x}-${this.y - 1}`];
+      delete grid.dirtyParticles[`${this.x}-${this.y}`];
+      delete grid.particles[`${this.x}-${this.y}`];
+      grid.createParticle(this.x, this.y-1, "water", "#0077be");
+      grid.dirtyParticles[`${this.x}-${this.y}`] = this;
+      grid.particles[`${this.x}-${this.y}`] = this;
     }
 
     updateParticle() {
@@ -45,53 +76,19 @@ let elementalApp = (function() {
       } else if (this.x + 1 > grid.colSize - 1) {
         return;
       }
-      // if down empty
+
       if (!grid.particles[`${this.x}-${this.y + 1}`]) {
-        // move down
-        this.y++;
-        delete grid.dirtyParticles[`${this.x}-${this.y - 1}`];
-        delete grid.particles[`${this.x}-${this.y - 1}`];
-        grid.particles[`${this.x}-${this.y}`] = this;
-        grid.dirtyParticles[`${this.x}-${this.y}`] = this;
+        this.moveDirection("down");
       } else if (grid.particles[`${this.x}-${this.y + 1}`].type === "water" && this.type === "sand") {
-        this.y++;
-        delete grid.dirtyParticles[`${this.x}-${this.y - 1}`];
-        delete grid.particles[`${this.x}-${this.y - 1}`];
-        delete grid.dirtyParticles[`${this.x}-${this.y}`];
-        delete grid.particles[`${this.x}-${this.y}`];
-        grid.createParticle(this.x, this.y-1, "water", "#0077be");
-        grid.dirtyParticles[`${this.x}-${this.y}`] = this;
-        grid.particles[`${this.x}-${this.y}`] = this;
+        this.swapDown();
       } else if (!grid.particles[`${this.x - 1}-${this.y + 1}`]) {
-      // else if down and left empty
-        // move down left
-        this.y++;
-        this.x--;
-        delete grid.dirtyParticles[`${this.x + 1}-${this.y - 1}`];
-        delete grid.particles[`${this.x + 1}-${this.y - 1}`];
-        grid.particles[`${this.x}-${this.y}`] = this;
-        grid.dirtyParticles[`${this.x}-${this.y}`] = this;
+        this.moveDirection("leftdown")
       } else if (!grid.particles[`${this.x + 1}-${this.y + 1}`]) {
-        // else if down and right empty
-        // move down right
-        this.y++;
-        this.x++;
-        delete grid.dirtyParticles[`${this.x - 1}-${this.y - 1}`];
-        delete grid.particles[`${this.x - 1}-${this.y - 1}`];
-        grid.particles[`${this.x}-${this.y}`] = this;
-        grid.dirtyParticles[`${this.x}-${this.y}`] = this;
+        this.moveDirection(rightDown);
       } else if (this.type === "water" && !grid.particles[`${this.x - 1}-${this.y}`]) {
-        this.x--;
-        delete grid.dirtyParticles[`${this.x + 1}-${this.y}`]
-        delete grid.particles[`${this.x + 1}-${this.y}`];
-        grid.particles[`${this.x}-${this.y}`] = this;
-        grid.dirtyParticles[`${this.x}-${this.y}`] = this;
+        this.moveDirection("left");
       } else if (this.type === "water" && !grid.particles[`${this.x + 1}-${this.y}`]) {
-        this.x++;
-        delete grid.dirtyParticles[`${this.x - 1}-${this.y}`];
-        delete grid.particles[`${this.x - 1}-${this.y}`];
-        grid.particles[`${this.x}-${this.y}`] = this;
-        grid.dirtyParticles[`${this.x}-${this.y}`] = this;
+        this.moveDirection("right");
       } else {
         delete grid.dirtyParticles[`${this.x}-${this.y}`];
       }
