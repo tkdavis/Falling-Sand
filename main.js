@@ -9,6 +9,11 @@ let elementalApp = (function() {
       this.particles = {};
       this.dirtyParticles = {};
       this.tool = "sand";
+      this.tools = {
+        KeyE: "eraser",
+        KeyW: "water",
+        KeyS: "sand"
+      }
     }
 
     createParticle(x, y, type, color) {
@@ -18,8 +23,16 @@ let elementalApp = (function() {
 
       newParticle.type = type || "sand";
       newParticle.color = color || "#c2b280";
+      if (type === "water") {
+        newParticle.color = "#0077be";
+        newParticle.speed = 8;
+      }
       this.particles[`${x}-${y}`] = newParticle;
       this.dirtyParticles[`${x}-${y}`] = newParticle;
+    }
+
+    setTool(keyCode) {
+      this.tool = this.tools[keyCode] || "KeyS";
     }
   }
 
@@ -30,6 +43,7 @@ let elementalApp = (function() {
       this.color = "#c2b280";
       this.size = 1;
       this.type = "sand";
+      this.speed = 1;
       this.possibleDirections = {
         up: [0, -1],
         down: [0, 1],
@@ -57,6 +71,18 @@ let elementalApp = (function() {
       grid.dirtyParticles[`${this.x}-${this.y}`] = this;
     }
 
+    addForce(direction, speed) {
+      let dir = this.possibleDirections[direction];
+      // moveDirection until collided with something
+      for(let i = 0; i < speed; i++) {
+        if (grid.particles[`${this.x + dir[0]}-${this.y + dir[1]}`]) {
+          break;
+        }
+
+        this.moveDirection(direction);
+      }
+    }
+
     swapDown() {
       this.y++;
       delete grid.dirtyParticles[`${this.x}-${this.y - 1}`];
@@ -71,24 +97,24 @@ let elementalApp = (function() {
     updateParticle() {
       if (this.y + 1 > grid.rowSize) {
         return;
-      } else if (this.x - 1 < 0) {
+      } else if (this.x - 1 < -1) {
         return;
-      } else if (this.x + 1 > grid.colSize - 1) {
+      } else if (this.x + 1 > grid.colSize) {
         return;
       }
 
       if (!grid.particles[`${this.x}-${this.y + 1}`]) {
-        this.moveDirection("down");
+        this.addForce("down", 4);
       } else if (grid.particles[`${this.x}-${this.y + 1}`].type === "water" && this.type === "sand") {
         this.swapDown();
       } else if (!grid.particles[`${this.x - 1}-${this.y + 1}`]) {
         this.moveDirection("leftdown")
       } else if (!grid.particles[`${this.x + 1}-${this.y + 1}`]) {
-        this.moveDirection(rightDown);
+        this.moveDirection("rightdown");
       } else if (this.type === "water" && !grid.particles[`${this.x - 1}-${this.y}`]) {
-        this.moveDirection("left");
+        this.addForce("left", this.speed);
       } else if (this.type === "water" && !grid.particles[`${this.x + 1}-${this.y}`]) {
-        this.moveDirection("right");
+        this.addForce("right", this.speed);
       } else {
         delete grid.dirtyParticles[`${this.x}-${this.y}`];
       }
@@ -144,11 +170,11 @@ let elementalApp = (function() {
 
   function getPoints(x, y, r)
   {
-      var ret = [];
-      for (var j=x-r; j<=x+r; j++)
-        for (var k=y-r; k<=y+r; k++)
-            if (distance({x:j,y:k},{x:x,y:y}) <= r) ret.push({x:j,y:k});
-      return ret;
+    var ret = [];
+    for (var j=x-r; j<=x+r; j++)
+      for (var k=y-r; k<=y+r; k++)
+          if (distance({x:j,y:k},{x:x,y:y}) <= r) ret.push({x:j,y:k});
+    return ret;
   }
 
   function getMousePosition(canvas, event) { 
@@ -158,7 +184,7 @@ let elementalApp = (function() {
     let brushPoints = getPoints(x, y, 5);
 
     brushPoints.forEach((point) => {
-      if (point.x % 5 && point.y % 5) {
+      //if (point.x % 5 && point.y % 5) {
         if (grid.tool === "sand") {
           grid.createParticle(point.x, point.y, "sand", "#c2b280");
         } else if (grid.tool === "water") {
@@ -167,7 +193,7 @@ let elementalApp = (function() {
           delete grid.particles[`${point.x}-${point.y}`];
           delete grid.dirtyParticles[`${point.x}-${point.y}`];
         }
-      }
+      //}
     });
   }
 
@@ -178,7 +204,7 @@ let elementalApp = (function() {
     getMousePosition(canvasElem, e);
   }); 
 
-  canvasElem.addEventListener("mouseup", (e) => {
+  document.addEventListener("mouseup", (e) => {
     isDrawing = false;
   })
 
@@ -188,17 +214,9 @@ let elementalApp = (function() {
     }
   });
 
-  document.addEventListener('keydown', switchTool);
-
-  function switchTool(e) {
-    if (e.code === "KeyE") {
-      grid.tool = "eraser";
-    } else if (e.code === "KeyW") {
-      grid.tool = "water";
-    } else if (e.code === "KeyS") {
-      grid.tool = "sand";
-    }
-  }
+  document.addEventListener('keydown', (e) => {
+    grid.setTool(e.code);
+  });
 
   init();
 
